@@ -3,10 +3,12 @@ Connects TF2 Party Chat with Discord
 
 ## Getting started
 1. Create a `src/settings.json` (See [example.settings.json](src/example.settings.json))<br>
-Fields should be self-explanatory. To avoid breaking Discord's ToS you should use a bot token instead of your user token. And the discord channel should be a text channel you have permission to write on obviously.
+Most fields should be self-explanatory. To avoid breaking Discord's ToS you should use a bot token instead of your user token. And the discord channel should be a text channel you have permission to write on obviously.
 2. Start TF2 first
 3. Launch `run.bat` to start the program.
 4. Discord messages will now appear in party chat! You can reply within the party chat itself aswell!
+
+Note: To be able to send messages from TF2 to Discord, you must have `tf_mm_partyclient_debug` set to `1`.
 
 ## Commands
 - `/server` - Sends server information to Discord (Updates on each new server join)
