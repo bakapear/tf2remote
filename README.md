@@ -14,6 +14,10 @@ Note: To be able to send messages from TF2 to Discord, you must have `tf_mm_part
 - `/server` - Sends server information to Discord (Updates on each new server join)
 - `/disable` - Disables the program (You can't send messages anymore and won't receive any from Discord)
 - `/enable` - Enables it back
+- `/status` - Shows Discord hook status
+- `/channels` - Shows a list of available channels to connect to
+- `/channel` - Shows current channel connected to
+- `/channel <name>` - Switches to different channel
 
 ## Known Issues
 - If you close TF2 but don't close the program, it will launch TF2 by itself when you receive a Discord message.

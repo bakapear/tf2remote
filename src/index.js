@@ -12,8 +12,10 @@ let regex = {
   server: /^Connected to ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}):?([0-9]{1,5})?/m
 }
 
+let channel = null
+
 bot.on('ready', () => {
-  let channel = bot.channels.cache.get(cfg.channel)
+  channel = bot.channels.cache.get(cfg.channel)
   if (channel) {
     console.log(`Connected to #${channel.name}`)
     tf.input(`tf_party_chat "\\ Connected to #${channel.name}"`)
@@ -66,19 +68,48 @@ function commands (msg) {
   let cmd = args.shift().substr(1)
   msg = null
   switch (cmd) {
+    case 'channels': {
+      let channels = channel.guild.channels.cache.array().filter(x => x.type === 'text').map((x, i) => `${i + 1}. ${x.name}`)
+      tf.input(channels.map(x => `tf_party_chat "\\ ${x}"`))
+      break
+    }
+    case 'channel': {
+      if (!args.length) tf.input(`tf_party_chat "\\ Currently connected to: #${channel.name}"`)
+      else {
+        let chan = channel.guild.channels.cache.filter(x => x.type === 'text').find(x => x.name === args[0])
+        if (chan) {
+          channel = chan
+          tf.input(`tf_party_chat "\\ Switched to #${chan.name}"`)
+          console.log(`Switched to #${chan.name}`)
+        } else {
+          tf.input(`tf_party_chat "\\ Invalid text channel: '${args[0]}'"`)
+        }
+      }
+      break
+    }
     case 'server': {
       msg = stats.text
       if (!msg) tf.input('tf_party_chat "\\ No Server information yet!"')
       break
     }
     case 'enable': {
+      if (stats.disabled) console.log('Discord Hook ENABLED')
       stats.disabled = false
       tf.input('tf_party_chat "\\ Discord Hook ENABLED"')
       break
     }
     case 'disable': {
+      if (!stats.disabled) console.log('Discord Hook DISABLED')
       stats.disabled = true
       tf.input('tf_party_chat "\\ Discord Hook DISABLED"')
+      break
+    }
+    case 'status': {
+      tf.input(`tf_party_chat "\\ Discord Hook is currently ${stats.disabled ? 'DISABLED' : 'ENABLED'}"`)
+      break
+    }
+    default: {
+      tf.input('tf_party_chat "\\ Unknown command!"')
     }
   }
   return msg
