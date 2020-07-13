@@ -9,6 +9,7 @@
     "chokidar": "^3.4.0",
     "discord.js": "^12.2.0",
     "gamedig": "^2.0.21",
+    "process-list": "^2.0.0",
     "tail": "^2.0.4"
   },
   "devDependencies": {},

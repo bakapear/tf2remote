@@ -3,6 +3,7 @@ let Discord = require('./mods/Discord')
 let cfg = require('./settings.json')
 let dig = require('gamedig')
 let chalk = require('chalk')
+let psls = require('process-list')
 
 let tf = new Controller(cfg)
 let bot = new Discord(cfg.token)
@@ -14,10 +15,11 @@ let regex = {
 
 let channel = null
 
-bot.on('ready', () => {
+bot.on('ready', async () => {
   channel = bot.channels.cache.get(cfg.channel)
+  if (!(await psls.snapshot('name')).find(x => x.name === 'hl2.exe')) throw new Error('TF2 is not running!')
   if (channel) {
-    console.log(`Connected to #${channel.name}`)
+    console.info(`Connected to ${chalk.blue('#' + channel.name)}`)
     tf.input(`tf_party_chat "\\ Connected to #${channel.name}"`)
     bot.on('message', msg => {
       if (msg.channel === channel) {
@@ -34,16 +36,23 @@ bot.on('ready', () => {
           if (msg && msg.trim() && !stats.disabled) channel.send(msg)
         }
       }
+      if (line === 'Disconnecting from abandoned match server') {
+        console.info('Disconnected from server.')
+        stats.ip = null
+        stats.port = null
+        stats.text = null
+      }
       let server = line.match(regex.server)
       if (server) {
         stats.ip = server[1]
         stats.port = server[2]
         getServerData(stats.ip, stats.port, (err, res) => {
           if (err) console.error(err)
-          console.log('Connected to ' + `'${chalk.green(res.name)}' ${res.players.length}/${res.maxplayers} [${res.map}] (${chalk.yellow(res.connect)})`)
+          console.info('Connected to ' + `'${chalk.green(res.name)}' ${res.players.length}/${res.maxplayers} [${res.map}] (${chalk.yellow(res.connect)})`)
           stats.text = `\`${res.name}\` ${res.players.length}/${res.maxplayers} [${res.map}]\n${res.connect}`
         })
       }
+      if (line === 'CTFGCClientSystem::ShutdownGC') process.exit()
     })
   } else throw new Error(`Not a valid channel: "${cfg.channel}"`)
 })
@@ -80,7 +89,7 @@ function commands (msg) {
         if (chan) {
           channel = chan
           tf.input(`tf_party_chat "\\ Switched to #${chan.name}"`)
-          console.log(`Switched to #${chan.name}`)
+          console.info(`Switched to ${chalk.blue('#' + chan.name)}`)
         } else {
           tf.input(`tf_party_chat "\\ Invalid text channel: '${args[0]}'"`)
         }
@@ -93,13 +102,13 @@ function commands (msg) {
       break
     }
     case 'enable': {
-      if (stats.disabled) console.log('Discord Hook ENABLED')
+      if (stats.disabled) console.info('Enabled Discord Hook')
       stats.disabled = false
       tf.input('tf_party_chat "\\ Discord Hook ENABLED"')
       break
     }
     case 'disable': {
-      if (!stats.disabled) console.log('Discord Hook DISABLED')
+      if (!stats.disabled) console.info('Disabled Discord Hook')
       stats.disabled = true
       tf.input('tf_party_chat "\\ Discord Hook DISABLED"')
       break
@@ -128,3 +137,8 @@ function getServerData (ip, port, cb) {
     port: port || 27015
   }).then(r => cb(null, r)).catch(e => cb(e, null))
 }
+
+process.on('unhandledRejection', e => {
+  console.error(chalk.red(`Error: ${e.message}`))
+  process.exit()
+})
