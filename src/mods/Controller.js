@@ -15,7 +15,7 @@ module.exports = class extends Events {
       this.exec(`+exec ${data.cfg}`)
     }
     let log = path.join(data.dir, 'tf', data.log)
-    let watcher = new Tail(log, { useWatchFile: true, fsWatchOptions: { interval: 1000 } })
+    let watcher = new Tail(log, { useWatchFile: true, fsWatchOptions: { interval: 100 } })
     watcher.on('line', data => this.emit('line', data))
   }
 }
