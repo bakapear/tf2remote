@@ -20,10 +20,14 @@ bot.on('ready', async () => {
   if (!(await psls.snapshot('name')).find(x => x.name === 'hl2.exe')) throw new Error('TF2 is not running!')
   if (channel) {
     console.info(`Connected to ${chalk.blue('#' + channel.name)}`)
-    tf.input(`tf_party_chat "\\ Connected to #${channel.name}"`)
+    tf.input(`tf_party_chat "\\ [tf2remote] #${channel.name}"`)
     bot.on('message', msg => {
       if (msg.channel === channel) {
-        if (!stats.disabled) tf.input(`tf_party_chat "[${msg.author.username}]: ${msg.content}"`)
+        if (!stats.disabled) {
+          if (msg.attachments.size) msg.content += ` [ ${msg.attachments.size} Attachment${msg.attachments.size === 1 ? '' : 's'} ]`
+          if (msg.embeds.length) msg.content += ` [ ${msg.embeds.length} Embed${msg.embeds.length === 1 ? '' : 's'} ]`
+          tf.input(`tf_party_chat "[${msg.author.username}]: ${msg.content}"`)
+        }
       }
     })
     tf.on('line', line => {
@@ -52,7 +56,7 @@ bot.on('ready', async () => {
           stats.text = `\`${res.name}\` ${res.players.length}/${res.maxplayers} [${res.map}]\n${res.connect}`
         })
       }
-      if (line === 'CTFGCClientSystem::ShutdownGC') process.exit()
+      if (line === 'CTFGCClientSystem::ShutdownGC') kill()
     })
   } else throw new Error(`Not a valid channel: "${cfg.channel}"`)
 })
@@ -140,5 +144,17 @@ function getServerData (ip, port, cb) {
 
 process.on('unhandledRejection', e => {
   console.error(chalk.red(`Error: ${e.message}`))
-  process.exit()
+  kill()
 })
+
+process.on('SIGINT', kill)
+process.on('SIGHUP', kill)
+
+function kill () {
+  tf.input('tf_party_chat "\\ [tf2remote] Shutting down."')
+  console.info('Shutting down.')
+  setTimeout(() => {
+    bot.destroy()
+    process.exit()
+  }, 100)
+}
