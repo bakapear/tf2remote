@@ -8,10 +8,15 @@ let tf = new Controller(cfg)
 let bot = new Discord(cfg.token)
 let stats = {}
 
+let regex = {
+  server: /^Connected to ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}):?([0-9]{1,5})?/m
+}
+
 bot.on('ready', () => {
   let channel = bot.channels.cache.get(cfg.channel)
   if (channel) {
     console.log(`Connected to #${channel.name}`)
+    tf.input(`tf_party_chat "\\ Connected to #${channel.name}"`)
     bot.on('message', msg => {
       if (msg.channel === channel) {
         if (!stats.disabled) tf.input(`tf_party_chat "[${msg.author.username}]: ${msg.content}"`)
@@ -24,10 +29,10 @@ bot.on('ready', () => {
         if (!msg.match(/\[.*\]:/) && !msg.startsWith('\\')) {
           msg = mentions(msg)
           if (msg.startsWith('/')) msg = commands(msg)
-          if (msg && msg.trim()) channel.send(msg)
+          if (msg && msg.trim() && !stats.disabled) channel.send(msg)
         }
       }
-      let server = line.match(/^Connected to ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}):?([0-9]{1,5})?/m)
+      let server = line.match(regex.server)
       if (server) {
         stats.ip = server[1]
         stats.port = server[2]
@@ -63,6 +68,7 @@ function commands (msg) {
   switch (cmd) {
     case 'server': {
       msg = stats.text
+      if (!msg) tf.input('tf_party_chat "\\ No Server information yet!"')
       break
     }
     case 'enable': {
