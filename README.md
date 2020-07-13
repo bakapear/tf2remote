@@ -1,6 +1,8 @@
 # tf2remote
 Connects TF2 Party Chat with Discord
 
+![Preview](https://i.imgur.com/X0o7hxT.png)
+
 ## Getting started
 1. Create a `src/settings.json` (See [example.settings.json](src/example.settings.json))<br>
 Most fields should be self-explanatory. To avoid breaking Discord's ToS you should use a bot token instead of your user token. And the discord channel should be a text channel you have permission to write on obviously.
