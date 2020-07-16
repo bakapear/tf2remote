@@ -1,21 +1,15 @@
 {
   "name": "tf2remote",
   "version": "1.0.0",
-  "description": "",
+  "description": "Connects TF2 Party Chat with Discord",
   "main": "src/index.js",
   "dependencies": {
-    "@huydd/fs-tail-stream": "^1.1.0",
     "chalk": "^4.1.0",
-    "chokidar": "^3.4.0",
     "discord.js": "^12.2.0",
-    "gamedig": "^2.0.21",
     "process-list": "^2.0.0",
+    "rcon": "^1.0.3",
     "tail": "^2.0.4"
   },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+  "author": "bakapear",
+  "license": "MIT"
 }
