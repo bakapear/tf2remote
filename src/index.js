@@ -1,44 +1,34 @@
-let fs = require('fs')
-let chalk = require('chalk')
-let psls = require('process-list')
-let Discord = require('./lib/Discord')
-let Controller = require('./lib/Controller')
-let core = () => require('./core')
+let Controller = require('./lib/controller')
+let util = require('./lib/util')
 
-function config (file) {
-  if (!fs.existsSync(file)) throw new Error(`Config file missing: ${file}`)
-  return JSON.parse(fs.readFileSync(file, { encoding: 'utf-8' }))
+async function findTF2 () {
+  let procs = await util.listProcesses()
+  return procs.find(x => x.path.endsWith('steamapps\\common\\Team Fortress 2\\hl2.exe'))
 }
 
-function kill () {
-  setTimeout(() => {
-    tf.disconnect()
-    bot.destroy()
-    process.exit()
-  }, 100)
-}
-
-function error (e) {
-  console.error(chalk.red(`Error: ${e.message}`))
+async function kill (e) {
+  if (e.message) console.error(e.message)
+  await global.controller.close()
   process.exit()
 }
 
-process.on('SIGINT', kill)
-process.on('SIGHUP', kill)
-process.on('unhandledRejection', error)
-process.on('uncaughtException', error)
+async function main () {
+  let game = await findTF2()
+  if (!game) util.die('TF2 is not running!')
+  if (!util.splitArgs(game.cmd).includes('-usercon')) util.die('Missing "-usercon" launch parameter!')
 
-let cfg = config('settings.json')
-let bot = new Discord(cfg.token)
-let tf = new Controller(cfg.dir)
+  let controller = new Controller(game.path)
+  await controller.init()
 
-psls.snapshot('name', 'cmdline').then(async res => {
-  let pro = res.find(x => x.name === 'hl2.exe' && x.cmdline.indexOf('tf_mm_partyclient_debug') < 0)
-  if (!pro) throw new Error('TF2 is not running!')
-  if (!pro.cmdline.split(' ').includes('-usercon')) throw new Error('TF2 is missing -usercon in its launch options!')
-  tf.init().then(() => {
-    let globals = { tf, bot, cfg }
-    for (let obj in globals) global[obj] = globals[obj]
-    bot.on('ready', core)
-  })
-})
+  console.log('Listening for commands...')
+  global.controller = controller
+
+  process.on('SIGINT', kill)
+  process.on('SIGHUP', kill)
+  process.on('unhandledRejection', kill)
+  process.on('uncaughtException', kill)
+
+  require('./core')
+}
+
+main()
