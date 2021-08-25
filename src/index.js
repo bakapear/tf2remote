@@ -7,8 +7,8 @@ async function findTF2 () {
 }
 
 async function kill (e) {
-  if (e.message) console.error(e.message)
-  await global.controller.close()
+  if (e.message) console.error(e.stack.split('\n').slice(0, 2).map(x => x.trim()).join('\n'))
+  if (global.controller) await global.controller.close()
   process.exit()
 }
 
@@ -23,12 +23,12 @@ async function main () {
   console.log('Listening for commands...')
   global.controller = controller
 
-  process.on('SIGINT', kill)
-  process.on('SIGHUP', kill)
-  process.on('unhandledRejection', kill)
-  process.on('uncaughtException', kill)
-
   require('./core')
 }
 
 main()
+
+process.on('SIGINT', kill)
+process.on('SIGHUP', kill)
+process.on('unhandledRejection', kill)
+process.on('uncaughtException', kill)
