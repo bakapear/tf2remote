@@ -2,17 +2,17 @@ let Rcon = require('./rcon')
 let child = require('child_process')
 let ph = require('path')
 let fs = require('fs')
-let util = require('util')
-let events = require('events')
+let util = require('./util')
+let OWNER = ph.resolve(__dirname, '..', 'owner')
 
-let ZERO = '​' // zero-width space
+require('util').inherits(Controller, require('events').EventEmitter)
 
 function Controller (exe) {
   this.exe = exe
   this.log = ph.join(ph.dirname(exe), 'tf', 'console.log')
   this.pass = Math.random().toString(32).substr(2)
+  this.owner = fs.existsSync(OWNER) ? fs.readFileSync(OWNER, 'utf-8') : null
   this.server = null
-  this.owner = null
 }
 
 Controller.prototype.exec = function (args) {
@@ -36,8 +36,11 @@ Controller.prototype.init = async function () {
     '+con_logfile', ph.basename(this.log),
     '+con_timestamp', '1',
     '+rcon_password', this.pass,
-    '+net_status'
+    '+con_filter_enable', '1',
+    '+con_filter_text', 'cheeseburger',
+    '+con_filter_text_out', '[PartyClientDbg]'
   ])
+  this.exec('+net_status')
 
   return new Promise((resolve, reject) => {
     this.on('log', line => {
@@ -50,41 +53,53 @@ Controller.prototype.init = async function () {
           else {
             this.server = new Rcon(ip, port, this.pass)
             this.server.connect()
-            this.server.once('error', reject)
+            this.server.once('error', e => {
+              reject(e)
+            })
             this.server.once('auth', async () => {
+              await this.run('con_filter_text ""')
               resolve()
-              let line = await this.party(ZERO)
-              this.owner = parseChat(line).party.user
             })
           }
         }
-      } else if (line.party && line.party.user === this.owner) this.emit('message', line.party)
+      } else if (line.party && (!this.owner || this.owner === line.party.user)) this.emit('message', line.party)
     })
   })
 }
 
 Controller.prototype.run = async function (args) {
   if (!Array.isArray(args)) args = [args]
-  this.server.send(args.join('\n'))
+  let end = Math.random().toString(32).substr(2)
+  this.server.send(args.join('\n') + `; echo ${end}`)
   return new Promise(resolve => {
-    this.server.once('response', async data => {
-      if (data) resolve(data)
-      else {
-        let timer = setTimeout(() => resolve(''), 100)
-        this.once('log', data => {
-          if (timer) {
-            clearTimeout(timer)
-            resolve(data)
-          }
-        })
+    let res = []
+    let listening = true
+
+    let fn = async data => {
+      data = data.trim()
+      if (data.endsWith(end)) {
+        listening = false
+        data = data.slice(0, -end.length).trim()
+        res.push(data)
+        this.server.removeListener('response', fn)
+        resolve(res.join('\n'))
+      } else res.push(data)
+    }
+
+    this.server.on('response', fn)
+    setTimeout(() => {
+      if (listening) {
+        console.log('FAILED:', args)
+        this.server.removeListener('response', fn)
+        resolve(null)
       }
-    })
+    }, 1000)
   })
 }
 
 Controller.prototype.party = async function (args) {
   if (!Array.isArray(args)) args = [args]
-  return this.run(args.map(x => `tf_party_chat "${x.replace(/"/g, "'")}"`).join('\n'))
+  return this.run(args.map(x => `tf_party_chat "${x.toString().replace(/"/g, "'")}"`).join('\n'))
 }
 
 Controller.prototype.close = async function () {
@@ -102,44 +117,21 @@ Controller.prototype.getPlayers = async function () {
     let point = line.lastIndexOf('"')
     let name = line.substring(line.indexOf('"') + 1, point)
     let uid = line.substring(line.indexOf('[', point) + 1, line.indexOf(']', point))
-    if (uid) players.push({ name, uid, id: convertSteamID(uid) })
+    if (uid) players.push({ name, uid, id: util.convertSteamID(uid) })
   }
   return players
 }
-
-util.inherits(Controller, events.EventEmitter)
 
 module.exports = Controller
 
 function parseChat (str) {
   let block = { value: str }
-  match(block.value, /\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: /, m => {
+  util.match(block.value, /\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: /, m => {
     block.time = new Date(m[0].replace(/( - |:$)/g, ' '))
     block.value = str.substr(m[0].length)
   })
-  match(block.value, /^\[PartyClientDbg] \[Chat] (.+?) \[k_eTFPartyChatType_MemberChat \(1\)]: (.*)/, m => {
+  util.match(block.value, /^\[PartyClientDbg] \[Chat] (.+?) \[k_eTFPartyChatType_MemberChat \(1\)]: (.*)/, m => {
     block.party = { user: m[1], msg: m[2] }
   })
   return block
-}
-
-function match (str, regex, fn) {
-  let match = str.match(regex)
-  if (match) fn(match)
-}
-
-function convertSteamID (id) {
-  let args = id.split(':')
-  let n = Number(args[2])
-  let y, z
-
-  if (n % 2 === 0) {
-    y = 0
-    z = (n / 2)
-  } else {
-    y = 1
-    z = ((n - 1) / 2)
-  }
-
-  return '7656119' + ((z * 2) + (7960265728 + y))
 }
