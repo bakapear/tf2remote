@@ -20,7 +20,7 @@ async function main () {
   let controller = new Controller(game.path)
   await controller.init()
 
-  console.log('Listening for commands...')
+  console.info('[TF2remote] Started!')
   global.controller = controller
 
   require('./core')
