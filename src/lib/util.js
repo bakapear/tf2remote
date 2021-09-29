@@ -46,5 +46,24 @@ module.exports = {
         resolve(res)
       })
     })
+  },
+  match (str, regex, fn) {
+    let match = str.match(regex)
+    if (match) fn(match)
+  },
+  convertSteamID (id) {
+    let args = id.split(':')
+    let n = Number(args[2])
+    let y, z
+
+    if (n % 2 === 0) {
+      y = 0
+      z = (n / 2)
+    } else {
+      y = 1
+      z = ((n - 1) / 2)
+    }
+
+    return '7656119' + ((z * 2) + (7960265728 + y))
   }
 }
