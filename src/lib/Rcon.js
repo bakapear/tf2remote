@@ -137,53 +137,58 @@ Rcon.prototype._tcpSocketOnData = function (data) {
     this.outstandingData = null
   }
 
-  while (data.length) {
-    let len = data.readInt32LE(0)
-    if (!len) return
+  while (data.length >= 12) {
+    let len = data.readInt32LE(0) // Size of entire packet, not including the 4 byte length field
+    if (!len) return // No valid packet header, discard entire buffer
+
+    let packetLen = len + 4
+    if (data.length < packetLen) break // Wait for full packet, TCP may have segmented it
+
+    let bodyLen = len - 10 // Subtract size of ID, type, and two mandatory trailing null bytes
+    if (bodyLen < 0) {
+      data = data.slice(packetLen) // Length is too short, discard malformed packet
+      break
+    }
 
     let id = data.readInt32LE(4)
     let type = data.readInt32LE(8)
-
     let str
 
-    if (len >= 10 && data.length >= len + 4) {
-      if (id === this.rconId) {
-        if (!this.hasAuthed && type === PacketType.RESPONSE_AUTH) {
-          this.hasAuthed = true
-          this.emit('auth')
-        } else if (type === PacketType.RESPONSE_VALUE) {
-          // Read just the body of the packet (truncate the last null byte)
-          // See https://developer.valvesoftware.com/wiki/Source_RCON_Protocol for details
-          str = data.toString('utf8', 12, 12 + len - 10)
-
-          if (str.charAt(str.length - 1) === '\n') {
-            // Emit the response without the newline.
-            str = str.substring(0, str.length - 1)
-          }
-
-          this.emit('response', str)
-        }
-      } else if (id === -1) {
-        this.emit('error', new Error('Authentication failed'))
-      } else {
-        // ping/pong likely
-        str = data.toString('utf8', 12, 12 + len - 10)
+    if (id === this.rconId) {
+      if (!this.hasAuthed && type === PacketType.RESPONSE_AUTH) {
+        this.hasAuthed = true
+        this.emit('auth')
+      } else if (type === PacketType.RESPONSE_VALUE) {
+        // Read just the body of the packet (truncate the last null byte)
+        // See https://developer.valvesoftware.com/wiki/Source_RCON_Protocol for details
+        str = data.toString('utf8', 12, 12 + bodyLen)
 
         if (str.charAt(str.length - 1) === '\n') {
           // Emit the response without the newline.
           str = str.substring(0, str.length - 1)
         }
 
-        this.emit('server', str)
+        this.emit('response', str)
+      }
+    } else if (id === -1) {
+      this.emit('error', new Error('Authentication failed'))
+    } else {
+      // ping/pong likely
+      str = data.toString('utf8', 12, 12 + bodyLen)
+
+      if (str.charAt(str.length - 1) === '\n') {
+        // Emit the response without the newline.
+        str = str.substring(0, str.length - 1)
       }
 
-      data = data.slice(12 + len - 8)
-    } else {
-      // Keep a reference to the chunk if it doesn't represent a full packet
-      this.outstandingData = data
-      break
+      this.emit('server', str)
     }
+
+    data = data.slice(packetLen)
   }
+
+  // Keep a reference to remaining data, since the buffer might be split within a packet
+  this.outstandingData = data
 }
 
 Rcon.prototype.socketOnConnect = function () {
