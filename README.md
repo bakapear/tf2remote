@@ -7,6 +7,7 @@ Gives you the ability to add custom commands to party chat!
 - [NodeJS](https://nodejs.org/)
 
 ## Usage
+- Add your steamID3 in `src/owner` if you want to limit command usage to yourself. (Must be in square brackets)
 - Make sure TF2 has `-usercon` in its Launch Options and is running.
 - Execute `run.bat` to start the program.
 
