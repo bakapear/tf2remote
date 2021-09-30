@@ -2,6 +2,7 @@ let fs = require('fs')
 let ph = require('path')
 
 let PREFIX = '/'
+let PREFIX_ALT = 'tr_'
 let { controller } = global
 
 global.CMDS = []
@@ -42,9 +43,11 @@ function cacheCMD (cmd) {
 loadCommands('cmds')
 
 controller.on('message', chat => {
-  if (chat.msg[0] !== PREFIX) return
+  let alt = chat.msg.startsWith(PREFIX_ALT)
+  if (!(chat.msg.startsWith(PREFIX) || alt)) return
 
-  let args = chat.msg.substr(1).match(/[^"\s]+|"(?:\\"|[^"])+"/g) || []
+  let args = alt ? chat.msg.substr(PREFIX_ALT.length).match(/[^"_]+|"(?:\\"|[^"])+"/g) : chat.msg.substr(PREFIX.length).match(/[^"\s]+|"(?:\\"|[^"])+"/g)
+  if (!args) args = []
   args = args.map(x => x[0] + x.slice(-1) === '""' ? x.slice(1, -1) : x)
   let cmd = args.shift()
 
