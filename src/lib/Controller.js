@@ -107,21 +107,6 @@ Controller.prototype.close = async function () {
   return new Promise(resolve => this.server.once('end', resolve))
 }
 
-Controller.prototype.getPlayers = async function () {
-  let data = await this.run('status')
-  let lines = data.split('\n')
-  let players = []
-  for (let line of lines) {
-    line = parseChat(line).value
-    if (line[0] !== '#') continue
-    let point = line.lastIndexOf('"')
-    let name = line.substring(line.indexOf('"') + 1, point)
-    let uid = line.substring(line.indexOf('[', point) + 1, line.indexOf(']', point))
-    if (uid) players.push({ name, uid, id: util.convertSteamID(uid) })
-  }
-  return players
-}
-
 module.exports = Controller
 
 function parseChat (str) {
