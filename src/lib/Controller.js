@@ -15,9 +15,13 @@ function Controller (exe) {
   this.server = null
 }
 
-Controller.prototype.exec = function (args) {
+Controller.prototype.exec = async function (args) {
   if (!Array.isArray(args)) args = [args]
-  child.execFile(this.exe, ['-hijack', ...args])
+  let app = child.execFile(this.exe, ['-hijack', ...args])
+  return new Promise((resolve, reject) => {
+    app.on('error', reject)
+    app.on('exit', resolve)
+  })
 }
 
 Controller.prototype.init = async function () {
@@ -31,7 +35,7 @@ Controller.prototype.init = async function () {
     this.emit('log', buffer.toString())
   })
 
-  this.exec([
+  await this.exec([
     '+tf_mm_partyclient_debug', '1',
     '+con_logfile', ph.basename(this.log),
     '+con_timestamp', '1',
@@ -40,7 +44,6 @@ Controller.prototype.init = async function () {
     '+con_filter_text', 'cheeseburger',
     '+con_filter_text_out', '[PartyClientDbg]'
   ])
-  this.exec('+net_status')
 
   return new Promise((resolve, reject) => {
     this.on('log', line => {
@@ -53,9 +56,7 @@ Controller.prototype.init = async function () {
           else {
             this.server = new Rcon(ip, port, this.pass)
             this.server.connect()
-            this.server.once('error', e => {
-              reject(e)
-            })
+            this.server.once('error', reject)
             this.server.once('auth', async () => {
               await this.run('con_filter_text ""')
               resolve()
@@ -64,6 +65,7 @@ Controller.prototype.init = async function () {
         }
       } else if (line.party && (!this.owner || this.owner === line.party.user)) this.emit('message', line.party)
     })
+    this.exec('+net_status')
   })
 }
 
@@ -89,7 +91,6 @@ Controller.prototype.run = async function (args) {
     this.server.on('response', fn)
     setTimeout(() => {
       if (listening) {
-        console.log('FAILED:', args)
         this.server.removeListener('response', fn)
         resolve(null)
       }
